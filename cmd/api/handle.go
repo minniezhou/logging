@@ -13,7 +13,7 @@ type Handler struct {
 	router *chi.Mux
 }
 
-func NewHandler() *Handler {
+func (c *Config) NewHandler() *Handler {
 	r := chi.NewRouter()
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://*", "https://*"},
@@ -26,15 +26,15 @@ func NewHandler() *Handler {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Heartbeat("ping"))
 
-	r.Get("/", hello)
-	r.Post("/log", logToDB)
+	r.Get("/", c.hello)
+	r.Post("/log", c.logToDB)
 
 	return &Handler{
 		router: r,
 	}
 }
 
-func hello(w http.ResponseWriter, r *http.Request) {
+func (*Config) hello(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Ping Logging Service")
 	payload := jsonRequest{
 		Error:   false,
@@ -43,7 +43,7 @@ func hello(w http.ResponseWriter, r *http.Request) {
 	writeJson(w, http.StatusAccepted, payload)
 }
 
-func logToDB(w http.ResponseWriter, r *http.Request) {
+func (*Config) logToDB(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Logging request to Logging Service")
 	payload := jsonRequest{
 		Error:   false,
