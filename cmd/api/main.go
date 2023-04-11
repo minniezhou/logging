@@ -4,16 +4,19 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"logging-service/cmd/model"
 	"net/http"
 	"net/url"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 type Config struct {
 	client *mongo.Client
+	db     *model.Model
 }
 
 const (
@@ -34,8 +37,11 @@ func main() {
 	fmt.Println("Connected to Mongo DB")
 	// connect to MongoDB
 
+	model := model.NewDBClient(client)
+
 	c := Config{
 		client: client,
+		db:     model,
 	}
 
 	h := c.NewHandler()
@@ -47,16 +53,22 @@ func main() {
 }
 
 func connectToMongo() (*mongo.Client, error) {
-	password := url.QueryEscape("Zm0328:D")
+	password := url.QueryEscape("aJvpaLkL51rUEUlH")
 	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb+srv://minniezhou:" + password + "@cluster0.uxdvqoz.mongodb.net/?retryWrites=true&w=majority"))
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	err = client.Connect(ctx)
-	defer client.Disconnect(ctx)
-	defer cancel()
+	//defer client.Disconnect(ctx)
+	//defer cancel()
 	if err != nil {
+		return nil, err
+	}
+
+	err = client.Ping(ctx, readpref.Primary())
+	if err != nil {
+		fmt.Println("ping mongodb failed")
 		return nil, err
 	}
 

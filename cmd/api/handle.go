@@ -34,13 +34,20 @@ func (c *Config) NewHandler() *Handler {
 	}
 }
 
-func (*Config) hello(w http.ResponseWriter, r *http.Request) {
+func (c *Config) hello(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Ping Logging Service")
-	payload := jsonRequest{
-		Error:   false,
-		Message: "Ping Logging Service",
+
+	id, err := c.db.InsertOne("Ping", "Logging for Ping")
+	var payLoad jsonRequest
+	if err != nil {
+		payLoad.Error = true
+		payLoad.Message = "Ping Logging Service, logging failed"
+		fmt.Println(err.Error())
+	} else {
+		payLoad.Error = false
+		payLoad.Message = fmt.Sprintf("Ping Logging Service, Logging Id is %s", id)
 	}
-	writeJson(w, http.StatusAccepted, payload)
+	writeJson(w, http.StatusAccepted, payLoad)
 }
 
 func (*Config) logToDB(w http.ResponseWriter, r *http.Request) {
