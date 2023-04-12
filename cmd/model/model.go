@@ -13,8 +13,8 @@ var dbclient *mongo.Client
 
 type Model struct{}
 
-type dataType struct {
-	ID      primitive.ObjectID `json:"ID" bson:"_id,omitempty"`
+type DataType struct {
+	ID      primitive.ObjectID `json:"ID,omitempty" bson:"_id,omitempty"`
 	Name    string             `json:"name" bson:"name,omitempty"`
 	Message string             `json:"message" bson:"message,omitempty"`
 }
@@ -32,7 +32,7 @@ func NewDBClient(client *mongo.Client) *Model {
 func (*Model) InsertOne(name, message string) (any, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	payload := dataType{
+	payload := DataType{
 		Name:    name,
 		Message: message,
 	}

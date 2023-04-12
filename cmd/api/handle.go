@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"logging-service/cmd/model"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
@@ -35,7 +37,7 @@ func (c *Config) NewHandler() *Handler {
 }
 
 func (c *Config) hello(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("Ping Logging Service")
+	fmt.Println("Ping Logging Service")
 
 	id, err := c.db.InsertOne("Ping", "Logging for Ping")
 	var payLoad jsonRequest
@@ -50,11 +52,30 @@ func (c *Config) hello(w http.ResponseWriter, r *http.Request) {
 	writeJson(w, http.StatusAccepted, payLoad)
 }
 
-func (*Config) logToDB(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("Logging request to Logging Service")
-	payload := jsonRequest{
-		Error:   false,
-		Message: "Logging Request to Logging Service",
+func (c *Config) logToDB(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Logging to DB")
+	var logData model.DataType
+	err := readJson(w, r, &logData)
+	if err != nil {
+		fmt.Println("reading json data error")
+		errorJson(w, err.Error())
+		return
 	}
-	writeJson(w, http.StatusAccepted, payload)
+	fmt.Println(logData)
+
+	fmt.Println("Inserting one")
+	id, err := c.db.InsertOne(logData.Name, logData.Message)
+	fmt.Println("Inserted one")
+	var payLoad jsonRequest
+	if err != nil {
+		payLoad.Error = true
+		payLoad.Message = "logging failed"
+		fmt.Println(err.Error())
+	} else {
+		payLoad.Error = false
+		payLoad.Message = fmt.Sprintf("Logging Succeed, Logging Id is %s", id)
+		fmt.Println("Inserted one succesfully")
+	}
+
+	writeJson(w, http.StatusAccepted, payLoad)
 }
