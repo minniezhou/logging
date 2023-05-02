@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"logging-service/api/logging"
+	grpclog "logging-service/cmd/grpc-log"
 	"logging-service/cmd/model"
+	"net"
 	"net/http"
 	"net/url"
 	"time"
@@ -12,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"google.golang.org/grpc"
 )
 
 type Config struct {
@@ -20,7 +24,8 @@ type Config struct {
 }
 
 const (
-	webPort = 4321
+	webPort  = 4321
+	grpcPort = 43210
 )
 
 func main() {
@@ -38,18 +43,20 @@ func main() {
 	// connect to MongoDB
 
 	model := model.NewDBClient(client)
-
 	c := Config{
 		client: client,
 		db:     model,
 	}
 
-	h := c.NewHandler()
+	go c.grpcListener()
 
+	h := c.NewHandler()
+	fmt.Println("starting http server for logging...")
 	err = http.ListenAndServe(fmt.Sprintf(":%d", webPort), h.router)
 	if err != nil {
 		log.Panic(err)
 	}
+	fmt.Printf("http logger listening at %d", webPort)
 }
 
 func connectToMongo() (*mongo.Client, error) {
@@ -73,4 +80,20 @@ func connectToMongo() (*mongo.Client, error) {
 	}
 
 	return client, nil
+}
+
+func (c *Config) grpcListener() {
+	// listen to grpc connection
+	fmt.Println("starting grpc listening...")
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcPort))
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	grpc_s := grpc.NewServer()
+	logServer := grpclog.NewLogServer(c.db)
+	logging.RegisterLogServer(grpc_s, logServer)
+	fmt.Printf("grpc logger listening at %v", lis.Addr())
+	if err := grpc_s.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }
