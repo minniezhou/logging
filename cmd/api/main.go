@@ -9,7 +9,7 @@ import (
 	"logging-service/cmd/model"
 	"net"
 	"net/http"
-	"net/url"
+	"os"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -24,8 +24,11 @@ type Config struct {
 }
 
 const (
-	webPort  = 4321
-	grpcPort = 43210
+	WEB_PORT            = "4321"
+	GRPC_PORT           = "43210"
+	MONGO_USER_NAME     = "minniezhou"
+	MONGO_USER_PASSWORD = "aJvpaLkL51rUEUlH"
+	MONGO_HOST          = "@cluster0.uxdvqoz.mongodb.net/?retryWrites=true&w=majority"
 )
 
 func main() {
@@ -52,16 +55,21 @@ func main() {
 
 	h := c.NewHandler()
 	fmt.Println("starting http server for logging...")
-	err = http.ListenAndServe(fmt.Sprintf(":%d", webPort), h.router)
+	webPort := getEnv("WEB_PORT", WEB_PORT)
+	err = http.ListenAndServe(fmt.Sprintf(":%s", webPort), h.router)
 	if err != nil {
 		log.Panic(err)
 	}
-	fmt.Printf("http logger listening at %d", webPort)
+	fmt.Printf("http logger listening at %s", webPort)
 }
 
 func connectToMongo() (*mongo.Client, error) {
-	password := url.QueryEscape("aJvpaLkL51rUEUlH")
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb+srv://minniezhou:" + password + "@cluster0.uxdvqoz.mongodb.net/?retryWrites=true&w=majority"))
+	userName := getEnv("MONGO_USER_NAME", MONGO_USER_NAME)
+	password := getEnv("MONGO_USER_PASSWORD", MONGO_USER_PASSWORD)
+	link := getEnv("MONGO_HOST", MONGO_HOST)
+	mongo_url := fmt.Sprintf("mongodb+srv://%s:%s%s", userName, password, link)
+	log.Println(mongo_url)
+	client, err := mongo.NewClient(options.Client().ApplyURI(mongo_url))
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +93,8 @@ func connectToMongo() (*mongo.Client, error) {
 func (c *Config) grpcListener() {
 	// listen to grpc connection
 	fmt.Println("starting grpc listening...")
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcPort))
+	grpcPort := getEnv("GRPC_PORT", GRPC_PORT)
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", grpcPort))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -96,4 +105,12 @@ func (c *Config) grpcListener() {
 	if err := grpc_s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+}
+
+func getEnv(key, default_value string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return default_value
+	}
+	return value
 }
