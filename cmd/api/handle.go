@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
+	"github.com/minniezhou/jsonToolBox"
 )
 
 type Handler struct {
@@ -40,7 +41,7 @@ func (c *Config) hello(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Ping Logging Service")
 
 	id, err := c.db.InsertOne("Ping", "Logging for Ping")
-	var payLoad jsonRequest
+	var payLoad jsonToolBox.JsonResponse
 	if err != nil {
 		payLoad.Error = true
 		payLoad.Message = "Ping Logging Service, logging failed"
@@ -49,16 +50,16 @@ func (c *Config) hello(w http.ResponseWriter, r *http.Request) {
 		payLoad.Error = false
 		payLoad.Message = fmt.Sprintf("Ping Logging Service, Logging Id is %s", id)
 	}
-	writeJson(w, http.StatusAccepted, payLoad)
+	jsonToolBox.WriteJson(w, http.StatusAccepted, payLoad)
 }
 
 func (c *Config) logToDB(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Logging to DB")
 	var logData model.DataType
-	err := readJson(w, r, &logData)
+	err := jsonToolBox.ReadJson(w, r, &logData)
 	if err != nil {
 		fmt.Println("reading json data error")
-		errorJson(w, err.Error())
+		jsonToolBox.ErrorJson(w, err.Error())
 		return
 	}
 	fmt.Println(logData)
@@ -66,7 +67,7 @@ func (c *Config) logToDB(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Inserting one")
 	id, err := c.db.InsertOne(logData.Name, logData.Message)
 	fmt.Println("Inserted one")
-	var payLoad jsonRequest
+	var payLoad jsonToolBox.JsonResponse
 	if err != nil {
 		payLoad.Error = true
 		payLoad.Message = "logging failed"
@@ -77,5 +78,5 @@ func (c *Config) logToDB(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Inserted one succesfully")
 	}
 
-	writeJson(w, http.StatusAccepted, payLoad)
+	jsonToolBox.WriteJson(w, http.StatusAccepted, payLoad)
 }
